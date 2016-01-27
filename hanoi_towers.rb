@@ -28,28 +28,14 @@ module HanoiTowers
 
   class GameEngine
 
-    RINGS = [3, 2, 1]
+    #define starting amount of rings
+    #0 is the smallest ring
+    #should be in reverse order by the rules of the game
+    RINGS = [2, 1, 0]
 
-    SMALL_RING = '(#)'
-    MEDIUM_RING = '(###)'
-    BIG_RING = '(#####)'
-    POLE = '|-|'
-
-    #   (#)      |-|      |-|
-    #  (###)     |-|      |-|
-    #_(#####)____|-|______|-|___
-    #
-    #   |-|      |-|      |-|
-    #  (###)     |-|      |-|
-    #_(#####)____(#)______|-|___
-    #
-    #   |-|      |-|      |-|
-    #   |-|     (###)     |-|
-    #_(#####)____(#)______|-|___
-    #
-    #   |-|      |-|      |-|
-    #   |-|     (###)     |-|
-    #___|-|______(#)____(#####)_
+    def rings_count
+      RINGS.size
+    end
 
     attr_reader :left, :middle, :right
 
@@ -60,7 +46,7 @@ module HanoiTowers
     end
 
     def game_finished?
-      @right.stack_reverse_sorted? && @right.size == RINGS.size
+      @right.stack_reverse_sorted? && @right.size == rings_count
     end
 
     #To move 'rings' from one column to another
@@ -86,14 +72,32 @@ module HanoiTowers
       @right.inspect_data
     end
 
+    #   (#)      |-|      |-|
+    #  (###)     |-|      |-|
+    #_(#####)____|-|______|-|___
+    #
+    #   |-|      |-|      |-|
+    #  (###)     |-|      |-|
+    #_(#####)____(#)______|-|___
+    #
+    #   |-|      |-|      |-|
+    #   |-|     (###)     |-|
+    #_(#####)____(#)______|-|___
+    #
+    #   |-|      |-|      |-|
+    #   |-|     (###)     |-|
+    #___|-|______(#)____(#####)_
+
+    POLE = '|-|'.freeze
+
     def draw_field
-      tiers = ['', '', '']
+      tiers = []
       col1 = draw_column get_left_column
       col2 = draw_column get_middle_column
       col3 = draw_column get_right_column
-      tiers[0] << col1[0] + col2[0] + col3[0]
-      tiers[1] << col1[1] + col2[1] + col3[1]
-      tiers[2] << col1[2] + col2[2] + col3[2]
+      (0...rings_count).each do |i|
+        tiers[i] = col1[i] + col2[i] + col3[i]
+      end
       tiers.reverse_each do |t|
         puts t
       end
@@ -101,36 +105,30 @@ module HanoiTowers
 
     def draw_column(column)
       tiers = []
-      if column[0]
-        tiers << "_" * (4-column[0]) + draw_ring(column[0]) + "_" * (4-column[0])
-      else
-        tiers << "___" + POLE + "___"
-      end
 
-      if column[1]
-        tiers <<  " " * (4-column[1]) + draw_ring(column[1]) + " " * (4-column[1])
-      else
-        tiers <<  "   " + POLE + "   "
-      end
+      (0...rings_count).each do |i|
+        if i == 0
+          #because its the lowest row
+          free_space = "_"
+        else
+          free_space = " "
+        end
 
-      if column[2]
-        tiers <<  " " * (4-column[2]) + draw_ring(column[2]) + " " * (4-column[2])
-      else
-        tiers <<  "   " + POLE + "   "
+        if column[i]
+          tiers << free_space * (rings_count-column[i]) + draw_ring(column[i]) + free_space * (rings_count-column[i])
+        else
+          tiers << free_space * rings_count + POLE + free_space * rings_count
+        end
       end
       tiers
     end
 
+    private
+
     def draw_ring(size)
-      case size
-      when 1
-        SMALL_RING
-      when 2 
-        MEDIUM_RING
-      when 3
-        BIG_RING
-      end
+      '(#' + '#' * (2*size) + ')'.freeze
     end
+
   end
 
   class UI

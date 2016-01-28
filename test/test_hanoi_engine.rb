@@ -31,12 +31,23 @@ class TestGameEngine < MiniTest::Test
   end
 
   def test_basic_move
+    @game.instance_variable_set(:@left, HanoiTowers::HanoiStack.new([2, 1, 0]))
     assert_equal [0], @game.move(:from_left, :to_middle)
     assert_equal [2, 1], @game.get_left_column
     assert_equal [1], @game.move(:from_left, :to_right)
     assert_equal [2], @game.get_left_column
-    assert_equal [0, 1], @game.move(:from_right, :to_middle)
+    assert_equal [2, 1], @game.move(:from_right, :to_left)
     assert_equal [], @game.get_right_column
+  end
+  
+
+  def test_move_cant_place_bigger_ring_on_a_smaller_ring
+    custom_stack = HanoiTowers::GameEngine.new
+    custom_stack.instance_variable_set(:@left, HanoiTowers::HanoiStack.new([0]))
+    custom_stack.instance_variable_set(:@middle, HanoiTowers::HanoiStack.new([1]))
+    assert_equal false, custom_stack.move(:from_middle, :to_left)
+    assert_equal [0], custom_stack.get_left_column
+    assert_equal [1], custom_stack.get_middle_column
   end
 
   def test_move_if_both_args_are_the_same

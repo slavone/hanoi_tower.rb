@@ -13,6 +13,10 @@ module HanoiTowers
       @data.pop
     end
 
+    def top
+      @data.last || -1
+    end
+
     def size
       @data.size
     end
@@ -31,7 +35,7 @@ module HanoiTowers
     #define starting amount of rings
     #0 is the smallest ring
     #should be in reverse order by the rules of the game
-    RINGS = [2, 1, 0]
+    RINGS = [3, 2, 1, 0]
 
     def rings_count
       RINGS.size
@@ -56,6 +60,9 @@ module HanoiTowers
       from_parsed = $1 if from.to_s.match /from_(.*)/
       to_parsed = $1 if to.to_s.match /to_(.*)/
       return false if from_parsed == to_parsed
+      #by the rules of the game, bigger rings cant be placed on
+      #top of the smaller ones
+      return false unless send(to_parsed).top == -1 || send(to_parsed).top >= send(from_parsed).top
       return false unless moved = (send(to_parsed).push send(from_parsed).pop)
       moved
     end

@@ -34,5 +34,10 @@ class TestHanoiStack < MiniTest::Test
     assert_equal false, @stack.stack_reverse_sorted?
     assert_equal true, another_stack.stack_reverse_sorted?
   end
+
+  def test_top_gets_the_last_element
+    assert_equal 3, @stack.top
+    assert_equal 3, @stack.size
+  end
     
 end

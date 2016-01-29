@@ -33,50 +33,55 @@ module HanoiTowers
   class GameEngine
 
     #define starting amount of rings
-    #0 is the smallest ring
-    #should be in reverse order by the rules of the game
-    RINGS = [3, 2, 1, 0]
+    #rings are represented as an array like [3, 2, 1, 0]
+    #array is 'reversed' in the beginning by the rules of the game
+    #with 0 being the smallest ring
 
-    def rings_count
-      RINGS.size
+    def gen_rings(number_of_rings)
+      (number_of_rings-1).downto(0).map { |r| r }
     end
 
-    attr_reader :left, :middle, :right
+    def rings_count
+      @rings.size
+    end
 
-    def initialize
-      @left = HanoiStack.new(RINGS.clone)
-      @middle = HanoiStack.new
-      @right = HanoiStack.new
+    def initialize(number_of_rings = 3)
+      @rings = gen_rings(number_of_rings)
+      @field = {
+        left: HanoiStack.new(@rings.clone),
+        middle: HanoiStack.new,
+        right: HanoiStack.new
+      }
     end
 
     def game_finished?
-      @right.stack_reverse_sorted? && @right.size == rings_count
+      @field[:right].stack_reverse_sorted? && @field[:right].size == rings_count
     end
 
     #To move 'rings' from one column to another
     #pass :from_%column_name% as the first arg,
     #pass :to_%column_name% as the second arg
     def move(from, to)
-      from_parsed = $1 if from.to_s.match /from_(.*)/
-      to_parsed = $1 if to.to_s.match /to_(.*)/
+      from_parsed = $1.to_sym if from.to_s.match /from_(.*)/
+      to_parsed = $1.to_sym if to.to_s.match /to_(.*)/
       return false if from_parsed == to_parsed
       #by the rules of the game, bigger rings cant be placed on
       #top of the smaller ones
-      return false unless send(to_parsed).top == -1 || send(to_parsed).top >= send(from_parsed).top
-      return false unless moved = (send(to_parsed).push send(from_parsed).pop)
+      return false unless @field[to_parsed].top == -1 || @field[to_parsed].top >= @field[from_parsed].top
+      return false unless moved = @field[to_parsed].push(@field[from_parsed].pop)
       moved
     end
 
     def get_left_column
-      @left.inspect_data
+      @field[:left].inspect_data
     end
 
     def get_middle_column
-      @middle.inspect_data
+      @field[:middle].inspect_data
     end
 
     def get_right_column
-      @right.inspect_data
+      @field[:right].inspect_data
     end
 
     #   (#)      |-|      |-|
@@ -121,6 +126,9 @@ module HanoiTowers
           free_space = " "
         end
 
+        #each element of a column array represents a size of a ring
+        #for every possible ring size there should be at least one cell of 'free space'
+        #for columns not to stick together with the biggest possible ring
         if column[i]
           tiers << free_space * (rings_count-column[i]) + draw_ring(column[i]) + free_space * (rings_count-column[i])
         else
@@ -139,8 +147,8 @@ module HanoiTowers
   end
 
   class UI
-    def initialize
-      @game = GameEngine.new
+    def initialize(number_of_rings = 4)
+      @game = GameEngine.new(number_of_rings)
       @turns = 0
     end
 

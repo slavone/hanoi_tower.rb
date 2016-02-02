@@ -174,8 +174,8 @@ module HanoiTowers
       $1
     end
     
-    def get_user_input(prompt, err_msg = nil, string_parsing_method = nil)
-      puts prompt
+    def get_user_input(input_prompt, err_msg = nil, string_parsing_method = nil)
+      puts input_prompt
       input = gets.chomp.downcase
       if string_parsing_method
         if parsed_input = send(string_parsing_method, input)
@@ -192,20 +192,13 @@ module HanoiTowers
     end
 
     def get_move_directions
-      directions = {}
-      input_loop do
-        get_user_input('From which column do you want to move ring? (left / middle / right)',
-        "Sorry, i didnt understand that. Choose left, middle or right columns.", 
-        :parse_direction) do |input|
-          directions[:from] = 'from_' + input
-        end
-      end
-
-      input_loop do
-        get_user_input('And on what column do you want to put it? (left / middle / right)',
-        "Sorry, i didnt understand that. Choose left, middle or right columns.",
-        :parse_direction) do |input|
-          directions[:to] = 'to_' + input
+      directions = { from: nil, to: nil }
+      err_msg = "Sorry, i didnt understand that. Choose left, middle or right columns."
+      directions.keys.each do |key|
+        input_loop do
+          get_user_input("Move ring #{key}? (left/middle/right)", err_msg, :parse_direction) do |input|
+            directions[key] = "#{key}_" + input
+          end
         end
       end
       directions

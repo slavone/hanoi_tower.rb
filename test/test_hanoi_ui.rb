@@ -24,10 +24,12 @@ class TestUI < MiniTest::Test
   end
 
   def test_interpret_get_move_directions
-    with_stdin do |user|
-      user.puts 'left'
-      user.puts 'right'
-      assert_equal({ from: 'from_left', to: 'to_right' }, @ui.get_move_directions)
+    assert_output "Move ring from? (left/middle/right)\nMove ring to? (left/middle/right)\n" do
+      with_stdin do |user|
+        user.puts 'left'
+        user.puts 'right'
+        assert_equal({ from: 'from_left', to: 'to_right' }, @ui.get_move_directions)
+      end
     end
   end
 

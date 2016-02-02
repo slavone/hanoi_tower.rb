@@ -36,6 +36,9 @@ module HanoiTowers
     #rings are represented as an array like [3, 2, 1, 0]
     #array is 'reversed' in the beginning by the rules of the game
     #with 0 being the smallest ring
+    #
+
+    COLUMNS = [:left, :middle, :right]
 
     def gen_rings(number_of_rings)
       (number_of_rings-1).downto(0).map { |r| r }
@@ -64,6 +67,7 @@ module HanoiTowers
     def move(from, to)
       from_parsed = $1.to_sym if from.to_s.match /from_(.*)/
       to_parsed = $1.to_sym if to.to_s.match /to_(.*)/
+      return false unless COLUMNS.include?(from_parsed) && COLUMNS.include?(to_parsed)
       return false if from_parsed == to_parsed
       #by the rules of the game, bigger rings cant be placed on
       #top of the smaller ones
@@ -72,16 +76,8 @@ module HanoiTowers
       moved
     end
 
-    def get_left_column
-      @field[:left].inspect_data
-    end
-
-    def get_middle_column
-      @field[:middle].inspect_data
-    end
-
-    def get_right_column
-      @field[:right].inspect_data
+    def get_column(col)
+      @field[col].inspect_data
     end
 
     #   (#)      |-|      |-|
@@ -100,15 +96,16 @@ module HanoiTowers
     #   |-|     (###)     |-|
     #___|-|______(#)____(#####)_
 
-    POLE = '|-|'.freeze
 
     def draw_field
       tiers = []
-      col1 = draw_column get_left_column
-      col2 = draw_column get_middle_column
-      col3 = draw_column get_right_column
+      cols = []
+      COLUMNS.each { |col| cols << draw_column(get_column col) }
+      #number of rings is equal to number of tiers of the field
       (0...rings_count).each do |i|
-        tiers[i] = col1[i] + col2[i] + col3[i]
+        tiers[i] = ""
+        cols.each { |col| tiers[i] += col[i] }
+        #tiers[i] = cols[0][i] + cols[1][i] + cols[2][i]
       end
       tiers.reverse_each do |t|
         puts t
@@ -126,9 +123,12 @@ module HanoiTowers
           free_space = " "
         end
 
-        #each element of a column array represents a size of a ring
+        #value of each element in a column array represents a size of a ring
+        #size of a column is calculated in a way that max width of a column
+        #is equal to size_of_a_largest_ring + 1, where 1 is one cell of 'free space', 
+        #underscore or whitespace
         #for every possible ring size there should be at least one cell of 'free space'
-        #for columns not to stick together with the biggest possible ring
+        #so that columns do not stick together with their largest rings being on the same tier
         if column[i]
           tiers << free_space * (rings_count-column[i]) + draw_ring(column[i]) + free_space * (rings_count-column[i])
         else
@@ -140,10 +140,11 @@ module HanoiTowers
 
     private
 
+    POLE = '|-|'.freeze
+
     def draw_ring(size)
       '(#' + '#' * (2*size) + ')'.freeze
     end
-
   end
 
   class UI
@@ -154,69 +155,87 @@ module HanoiTowers
 
     def start_game(username = '')
       puts "Hello #{username}, can you solve the puzzle of the hanoi towers?"
-      loop do
+      at_exit { puts "Goodbye, #{username}!" }
+      input_loop do
         @game.draw_field
-        if parse_input prompt_user_command
-          @turns += 1
-          break if @game.game_finished?
+        get_user_input 'Whats your move going to be?' do |input|
+          if interpret_user_commands input
+            @turns += 1
+            @game.game_finished?
+          end
         end
       end
       @game.draw_field
       puts "Congratulations, you've beaten the puzzle! It took you #{@turns} turns."
     end
 
-    def prompt_user_command
-      puts "Whats your move going to be?"
-      input = gets.chomp
-    end
-    
-    def sanitize_input(word)
+    def parse_direction(word)
       word.match /(left|middle|right)/
       $1
     end
-
-    def parse_move_commands
-      from, to = nil, nil
-      loop do
-        puts 'From which column do you want to move ring? (left / middle / right)'
-        from = gets.chomp
-        from.downcase!
-        if from = sanitize_input(from)
-          from = 'from_' + from
-          break
+    
+    def get_user_input(prompt, err_msg = nil, string_parsing_method = nil)
+      puts prompt
+      input = gets.chomp.downcase
+      if string_parsing_method
+        if parsed_input = send(string_parsing_method, input)
+          return yield parsed_input if block_given?
+          parsed_input
         else
-          puts "Sorry, i didnt understand that. Choose left, middle or right columns."
+          puts err_msg if err_msg
+          false
         end
+      else
+        return yield input if block_given?
+        input
       end
-
-      loop do
-        puts 'And on what column do you want to put it? (left / middle / right)'
-        to = gets.chomp
-        to.downcase!
-        if to = sanitize_input(to)
-          to = 'to_' + to
-          break
-        else
-          puts "Sorry, i didnt understand that. Choose left, middle or right columns."
-        end
-      end
-      @game.move from, to
     end
 
-    def parse_input(input)
-      input.downcase!
+    def get_move_directions
+      directions = {}
+      input_loop do
+        get_user_input('From which column do you want to move ring? (left / middle / right)',
+        "Sorry, i didnt understand that. Choose left, middle or right columns.", 
+        :parse_direction) do |input|
+          directions[:from] = 'from_' + input
+        end
+      end
+
+      input_loop do
+        get_user_input('And on what column do you want to put it? (left / middle / right)',
+        "Sorry, i didnt understand that. Choose left, middle or right columns.",
+        :parse_direction) do |input|
+          directions[:to] = 'to_' + input
+        end
+      end
+      directions
+    end
+
+    def interpret_user_commands(input)
       case input
-      when 'help'
+      when /help/
         puts "Type 'move' to move rings. Type 'exit' if you want to quit game."
         false
       when 'move'
-        parse_move_commands
+        directions = get_move_directions
+        @game.move directions[:from], directions[:to]
+        true
+      when /move (\w+) (\w+)/
+        @game.move 'from_' + $1, 'to_' + $2
         true
       when 'exit'
         exit
       else
         puts "Sorry, i didn't understand that. Type 'help' to learn how to play"
         false
+      end
+    end
+
+    private
+
+    def input_loop
+      loop do
+        break if yield
       end
     end
   end
